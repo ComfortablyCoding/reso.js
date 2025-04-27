@@ -17,6 +17,9 @@ importers:
       p-queue:
         specifier: ^8.1.0
         version: 8.1.0
+      ufo:
+        specifier: ^1.6.1
+        version: 1.6.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.25.1

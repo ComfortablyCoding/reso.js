@@ -1,5 +1,6 @@
 import type { $Fetch, FetchError } from 'ofetch';
 import { $fetch } from 'ofetch';
+import { getQuery, parsePath, parseQuery, stringifyQuery } from 'ufo';
 import type {
 	FeedOptions,
 	FeedRequestOptions,
@@ -27,29 +28,33 @@ export class Feed {
 	}
 
 	$metadata(query?: string) {
-		return this.request(this.buildURL('/$metadata', query)) as unknown as string;
-	}
 
-	buildURL(url: string, query?: string) {
-		if (!query) {
-			return url;
+		const requestOptions:Partial<FeedRequestOptions> = {};
+
+		if(query){
+			requestOptions['query'] = parseQuery(query)
 		}
 
-		return url + '?' + query;
+		return this.request('/$metadata', requestOptions) as unknown as string;
 	}
 
 	async *readByQuery<V extends Record<string, unknown>>(
 		resource: string,
 		query?: string,
 	): AsyncGenerator<FeedResponse<V>> {
-		let url: null | string = this.buildURL(resource, query);
+		let url: null | string = resource;
+
+		let q = query;
 
 		do {
-			const readResponse = (await this.request<V>(url || resource)) as FeedResponse<V>;
+			const readResponse = (await this.request<V>(url || resource, {
+				query: parseQuery(q),
+			})) as FeedResponse<V>;
 
 			url = null;
 			if (readResponse && 'nextLink' in readResponse) {
-				url = readResponse.nextLink;
+				url = parsePath(readResponse.nextLink).pathname;
+				q = stringifyQuery(getQuery(readResponse.nextLink));
 			}
 
 			yield readResponse;
@@ -61,9 +66,16 @@ export class Feed {
 		id: string | number,
 		query?: string,
 	): Promise<FeedResponse<V>> {
-		return this.request<V>(
-			this.buildURL(resource + `(${typeof id === 'string' ? `'${id}'` : id})`, query),
-		) as unknown as FeedResponse<V>;
+		const resourceId = `(${typeof id === 'string' ? `'${id}'` : id})`;
+
+
+		const requestOptions:Partial<FeedRequestOptions> = {};
+
+		if(query){
+			requestOptions['query'] = parseQuery(query)
+		}
+
+		return this.request<V>(resource + resourceId, requestOptions) as unknown as FeedResponse<V>;
 	}
 
 	async request<R extends Record<string, unknown>>(

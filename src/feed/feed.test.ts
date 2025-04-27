@@ -49,21 +49,7 @@ describe('Feed', () => {
 		it('Calls the /$metadata endpoint for $metadata', () => {
 			feed.$metadata();
 
-			expect(feed.request).toBeCalledWith('/$metadata');
-		});
-	});
-
-	describe('buildURL', () => {
-		it('Return url if no query is provided', () => {
-			const url = feed.buildURL('/');
-
-			expect(url).eq('/');
-		});
-
-		it('Return url + ? + query if query is provided', () => {
-			const url = feed.buildURL('/', 'foo=bar');
-
-			expect(url).eq('/?foo=bar');
+			expect(feed.request).toBeCalledWith('/$metadata',{});
 		});
 	});
 
@@ -72,14 +58,14 @@ describe('Feed', () => {
 			vi.mocked(feed.request);
 
 			await feed.readById('/Property', 123);
-			expect(feed.request).toHaveBeenCalledWith('/Property(123)');
+			expect(feed.request).toHaveBeenCalledWith('/Property(123)',{});
 		});
 
 		it('Constructs singleton key query for string with qoutes', async () => {
 			vi.mocked(feed.request);
 
 			await feed.readById('/Property', '123');
-			expect(feed.request).toHaveBeenCalledWith("/Property('123')");
+			expect(feed.request).toHaveBeenCalledWith("/Property('123')",{});
 		});
 	});
 
@@ -88,13 +74,34 @@ describe('Feed', () => {
 			vi.mocked(feed.request)
 				.mockResolvedValueOnce({
 					values: [],
-					nextLink: '/',
+					nextLink: 'https://my-reso-api/v2/Property?$filter=ListingPrice%20eq%20200000%20&$top=1000&$skip=4000',
 				})
 				.mockResolvedValueOnce({ values: [] });
 
-			const readByQuery = feed.readByQuery('/');
-			expect((await readByQuery.next()).value).toStrictEqual(expect.objectContaining({ values: [], nextLink: '/' }));
+			const readByQuery = feed.readByQuery('Property', '$filter=ListingPrice eq 200000 &$top=1000');
+			expect((await readByQuery.next()).value).toStrictEqual(
+				expect.objectContaining({
+					values: [],
+					nextLink: 'https://my-reso-api/v2/Property?$filter=ListingPrice%20eq%20200000%20&$top=1000&$skip=4000',
+				}),
+			);
+
+			expect(feed.request).toHaveBeenCalledWith('Property', {
+				query: {
+					$filter: 'ListingPrice eq 200000 ',
+					$top: '1000',
+				},
+			});
 			expect((await readByQuery.next()).value).toStrictEqual(expect.objectContaining({ values: [] }));
+
+			expect(feed.request).toHaveBeenCalledWith('https://my-reso-api/v2/Property', {
+				query: {
+					$filter: 'ListingPrice eq 200000 ',
+					$top: '1000',
+					$skip:"4000"
+				},
+			});
+
 			expect((await readByQuery.next()).value).eq(undefined);
 		});
 	});
