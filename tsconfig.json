@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2023"],
+		"module": "Node16",
+		"checkJs": true,
+		"strict": true,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"exactOptionalPropertyTypes": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedIndexedAccess": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"declaration": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"moduleResolution": "Node16",
+		"verbatimModuleSyntax": true,
+		"outDir": "dist"
+	},
+	"include": ["src"]
+}
