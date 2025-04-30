@@ -40,15 +40,15 @@ export interface FeedBaseResponse {
 	count?: string | number;
 }
 
-export interface FeedMultiResponse<V> extends FeedBaseResponse {
+export interface FeedMultiResponse<V extends Record<string, unknown>> extends FeedBaseResponse {
 	values: V[];
 }
 
-export interface FeedSingleResponse<V> extends FeedBaseResponse {
+export interface FeedSingleResponse<V extends Record<string, unknown>> extends FeedBaseResponse {
 	value: V;
 }
 
-export type FeedResponse<V> = FeedMultiResponse<V> | FeedSingleResponse<V>;
+export type FeedResponse<V extends Record<string, unknown>> = FeedMultiResponse<V> | FeedSingleResponse<V>;
 
 export interface FeedOptions {
 	http: FeedHttpOptions;

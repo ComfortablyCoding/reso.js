@@ -2,9 +2,11 @@ import type { $Fetch, FetchError } from 'ofetch';
 import { $fetch } from 'ofetch';
 import { getQuery, parsePath, parseQuery, stringifyQuery } from 'ufo';
 import type {
+	FeedMultiResponse,
 	FeedOptions,
 	FeedRequestOptions,
 	FeedResponse,
+	FeedSingleResponse,
 	TransportError,
 	TransportResponse,
 } from '../types/index.js';
@@ -28,11 +30,10 @@ export class Feed {
 	}
 
 	$metadata(query?: string) {
+		const requestOptions: Partial<FeedRequestOptions> = {};
 
-		const requestOptions:Partial<FeedRequestOptions> = {};
-
-		if(query){
-			requestOptions['query'] = parseQuery(query)
+		if (query) {
+			requestOptions['query'] = parseQuery(query);
 		}
 
 		return this.request('/$metadata', requestOptions) as unknown as string;
@@ -41,7 +42,7 @@ export class Feed {
 	async *readByQuery<V extends Record<string, unknown>>(
 		resource: string,
 		query?: string,
-	): AsyncGenerator<FeedResponse<V>> {
+	): AsyncGenerator<FeedMultiResponse<V>> {
 		let url: null | string = resource;
 
 		let q = query;
@@ -49,7 +50,7 @@ export class Feed {
 		do {
 			const readResponse = (await this.request<V>(url || resource, {
 				query: parseQuery(q),
-			})) as FeedResponse<V>;
+			})) as FeedMultiResponse<V>;
 
 			url = null;
 			if (readResponse && 'nextLink' in readResponse) {
@@ -65,17 +66,16 @@ export class Feed {
 		resource: string,
 		id: string | number,
 		query?: string,
-	): Promise<FeedResponse<V>> {
+	): Promise<FeedSingleResponse<V>> {
 		const resourceId = `(${typeof id === 'string' ? `'${id}'` : id})`;
 
+		const requestOptions: Partial<FeedRequestOptions> = {};
 
-		const requestOptions:Partial<FeedRequestOptions> = {};
-
-		if(query){
-			requestOptions['query'] = parseQuery(query)
+		if (query) {
+			requestOptions['query'] = parseQuery(query);
 		}
 
-		return this.request<V>(resource + resourceId, requestOptions) as unknown as FeedResponse<V>;
+		return this.request<V>(resource + resourceId, requestOptions) as unknown as FeedSingleResponse<V>;
 	}
 
 	async request<R extends Record<string, unknown>>(

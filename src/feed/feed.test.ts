@@ -49,7 +49,7 @@ describe('Feed', () => {
 		it('Calls the /$metadata endpoint for $metadata', () => {
 			feed.$metadata();
 
-			expect(feed.request).toBeCalledWith('/$metadata',{});
+			expect(feed.request).toBeCalledWith('/$metadata', {});
 		});
 	});
 
@@ -58,14 +58,14 @@ describe('Feed', () => {
 			vi.mocked(feed.request);
 
 			await feed.readById('/Property', 123);
-			expect(feed.request).toHaveBeenCalledWith('/Property(123)',{});
+			expect(feed.request).toHaveBeenCalledWith('/Property(123)', {});
 		});
 
 		it('Constructs singleton key query for string with qoutes', async () => {
 			vi.mocked(feed.request);
 
 			await feed.readById('/Property', '123');
-			expect(feed.request).toHaveBeenCalledWith("/Property('123')",{});
+			expect(feed.request).toHaveBeenCalledWith("/Property('123')", {});
 		});
 	});
 
@@ -98,7 +98,7 @@ describe('Feed', () => {
 				query: {
 					$filter: 'ListingPrice eq 200000 ',
 					$top: '1000',
-					$skip:"4000"
+					$skip: '4000',
 				},
 			});
 
