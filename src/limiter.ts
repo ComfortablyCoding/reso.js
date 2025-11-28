@@ -6,6 +6,6 @@ export function createLimiter(opts: CreateLimiterOptions): FeedLimiter {
 		concurrency: 1,
 		interval: opts.duration ?? 60 * 1000,
 		intervalCap: opts.points ?? 100,
-		carryoverConcurrencyCount: true,
+		carryoverIntervalCount: true,
 	});
 }
