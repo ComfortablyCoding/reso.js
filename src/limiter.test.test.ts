@@ -17,7 +17,7 @@ describe('createLimiter', () => {
 		createLimiter({});
 
 		expect(PQueue).toBeCalledWith({
-			carryoverConcurrencyCount: true,
+			carryoverIntervalCount: true,
 			concurrency: 1,
 			interval: 60000,
 			intervalCap: 100,
@@ -31,7 +31,7 @@ describe('createLimiter', () => {
 		});
 
 		expect(PQueue).toBeCalledWith({
-			carryoverConcurrencyCount: true,
+			carryoverIntervalCount: true,
 			concurrency: 1,
 			interval: 30000,
 			intervalCap: 10,
