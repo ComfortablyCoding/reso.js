@@ -36,16 +36,16 @@ export interface FeedHooksOptions<T = unknown, R extends ResponseType = Response
 
 export interface FeedBaseResponse {
 	context?: string;
-	nextLink?: string;
-	count?: string | number;
 }
 
 export interface FeedMultiResponse<V extends Record<string, unknown>> extends FeedBaseResponse {
-	values: V[];
+	nextLink?: string;
+	count?: string | number;
+	data: V[];
 }
 
 export interface FeedSingleResponse<V extends Record<string, unknown>> extends FeedBaseResponse {
-	value: V;
+	data: V;
 }
 
 export type FeedResponse<V extends Record<string, unknown>> = FeedMultiResponse<V> | FeedSingleResponse<V>;

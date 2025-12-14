@@ -7,6 +7,7 @@ All notable changes will be documented in this file.
 ### Changed
 
 - Updated various dependencies to latest stable versions.
+- Updated the response structure to a unified data property. For single entities, data contains the entity object (R). For collections, data contains an array of entities (R[]).
 
 ### Fixed
 

@@ -102,12 +102,9 @@ export class Feed {
 
 		const { '@odata.count': count, '@odata.nextLink': nextLink, '@odata.context': context, ...remaining } = data;
 
-		const providerResponse: FeedResponse<R> =
-			'value' in remaining
-				? {
-						values: remaining.value,
-					}
-				: { value: remaining };
+		const providerResponse: FeedResponse<R> = {
+			data: 'value' in remaining ? remaining.value : remaining,
+		};
 
 		if (typeof count === 'string' || typeof count === 'number') {
 			providerResponse.count = Number(count);
