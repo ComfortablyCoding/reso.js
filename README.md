@@ -1,6 +1,12 @@
 # reso.js
 
-**`reso.js`** is a `Node.js` client for interacting with RESO Web API services, fully aligned with the current [RESO Web API specification](https://github.com/RESOStandards/transport).
+**`reso.js`** is a robust, Typescript-first `Node.js` client designed for interaction with RESO Web API services.
+
+It is _fully compliant_ with the current [RESO Web API specification](https://github.com/RESOStandards/transport) and provides commonly used features out-of-the-box, including:
+
+- **Automatic Pagination**
+- **Authentication**
+- **Built-in Rate Limiting**
 
 It includes features like custom request/response hooks, automatic authentication token refresh, and built-in rate limiting.
 
@@ -47,9 +53,11 @@ This library works with any RESO-compliant server following the [RESO Web API sp
 
 ### Getting Started
 
-`reso.js` supports both **Bearer Token** and **Client Credentials** authentication strategies. Refer to your feed's documentation for your feeds supported strategy and how to obtain credentials.
+`reso.js` supports both **Bearer Token** and **Client Credentials** authentication strategies. Refer to your feed's documentation for your the supported strategy and how to obtain credentials.
 
 #### Bearer Token Authentication
+
+This strategy is used when you have a long-lived, non-expiring token.
 
 ```js
 import { createFeed } from 'reso.js';
@@ -71,6 +79,8 @@ const feed = createFeed({
 
 #### Client Credentials Authentication
 
+This strategy is required when the provider uses the OAuth 2.0 Client Credentials flow, it will autemtically refresh the token before it expires.
+
 ```js
 import { createFeed } from 'reso.js';
 
@@ -80,47 +90,62 @@ const feed = createFeed({
 	},
 	auth: {
 		type: 'credentials',
-		 credentials :{
-      tokenURL: 'http://my-reso-api.com/token'
-      clientId: 'MY_CLIENT_ID'
-      clientSecret: 'MY_CLIENT_SECRET'
-    }
+		credentials: {
+			tokenURL: 'http://my-reso-api.com/token',
+			clientId: 'MY_CLIENT_ID',
+			clientSecret: 'MY_CLIENT_SECRET',
+			// Optional: grantType and scope
+		},
+		// Optional: Custom refresh buffer (default is 30,000ms / 30 seconds)
+		// refreshBuffer: 40000,
 	},
 });
 ```
 
-You can optionally include `grantType` and `scope`. Tokens will automatically refresh 30 seconds before expiry by default.
+### Types Safety (Typescript)
 
-To custom the refresh buffer it can be passed in the with the auth strategy:
+For an enhanced development experience, you can pass a generic type to `createFeed` to auto type the client to your resources shapes, enabling full type-safety for all operations.
 
-```js
+```ts
 import { createFeed } from 'reso.js';
 
-const feed = createFeed({
+// 1. Define the TypeScript interface for your RESO resources.
+// This generic type maps resource names (e.g., 'Property') to their expected shape.
+interface Resources {
+	Property: {
+		ListingId: string;
+		ListPrice: number;
+		// ... all other expected properties
+	};
+	Agent: { Name: string };
+}
+
+// 2. Create the feed instance, applying the Resources generic.
+const feed = createFeed<Resources>({
 	http: {
 		baseURL: 'http://my-reso-api.com',
 	},
-	auth: {
-		type: 'credentials',
-    credentials :{
-      tokenURL: 'http://my-reso-api.com/token'
-      clientId: 'MY_CLIENT_ID'
-      clientSecret: 'MY_CLIENT_SECRET'
-    },
-		refreshBuffer:40000,
-	},
+	// ... config
 });
+
+// 3. Read a specific resource by ID.
+// Because the feed is typed with <Resources>, the 'Property' resource
+// and the 'myProperty' response are fully type-safe, preventing runtime errors.
+const myProperty = await feed.readById('Property', 123);
+
+// This access is now guaranteed to be type-safe!
+console.log(myProperty.data.ListingId);
 ```
 
 ### Querying the API
 
 #### `readByQuery`
 
-Perform a RESO-compliant query. The function is an async generator that will auto paginate any next pages if the nextLink is present every time `.next()` is called or the result is looped over.
+Perform a RESO-compliant query. The function is an **async generator** that handles auto pagination for you. Use a `for await...of` loop to iterate through all pages of results.
 
 ```js
 for await (let properties of feed.readByQuery('Property', '$filter=ListPrice gt 100000')) {
-	for (property of properties.values) {
+	for (property of properties.data) {
 		console.log(property);
 	}
 }
@@ -132,7 +157,7 @@ Retrieve a specific record by ID:
 
 ```js
 const myProperty = await feed.readyById('Property', 123);
-console.log(myProperty.value);
+console.log(myProperty.data);
 ```
 
 ### Fetching `$metadata`
@@ -141,12 +166,17 @@ Get the feed’s metadata XML:
 
 ```js
 const metadata = await feed.$metadata();
-console.log(metadata);
+console.log(metadata); // The raw XML string
 ```
 
 ### Rate Limiting
 
 Rate limiting is built-in for supported providers. You can also customize limits:
+
+| Parameter      | Type          | Description                                       |
+| :------------- | :------------ | :------------------------------------------------ |
+| **`duration`** | `number` (ms) | The time window for the limit.                    |
+| **`points`**   | `number`      | The maximum requests allowed within the duration. |
 
 ```js
 const feed = createFeed({
@@ -164,14 +194,16 @@ const feed = createFeed({
 
 ### Hooks
 
+Customize the client's behavior by passing an object of supported hooks (based on [ofetch interceptors](https://github.com/unjs/ofetch?tab=readme-ov-file#%EF%B8%8F-interceptors)).
+
 The clients behaviour can be customized with the following supported hooks:
 
-- `onRequest`
-- `onRequestError`
-- `onResponse`
-- `onResponseError`
-
-These are backed by [ofetch interceptors](https://github.com/unjs/ofetch?tab=readme-ov-file#%EF%B8%8F-interceptors). Additional hooks will be added/supported as needed.
+| Hook              | Purpose                                               |
+| :---------------- | :---------------------------------------------------- |
+| `onRequest`       | Modify the request before it's sent.                  |
+| `onRequestError`  | Handle errors during the request setup.               |
+| `onResponse`      | Inspect/Modify the response data after it's received. |
+| `onResponseError` | Handle HTTP errors (e.g., 4xx, 5xx) before throwing.  |
 
 **Example** – Appending `/replication` to `Property` requests:
 
@@ -189,12 +221,12 @@ hooks: {
 
 ### Error Handling
 
-The client throws a `FeedError` with detailed RESO error info:
+The client throws a custom `FeedError` with detailed RESO error information:
 
 ```js
 try {
 	const myProperty = await feed.readById('Property', 123);
-	console.log(myProperty.value);
+	console.log(myProperty.data);
 } catch (error) {
 	if (error instanceof FeedError) {
 		console.log(error.details);
@@ -204,7 +236,7 @@ try {
 
 ## Contributing
 
-Bug reports, pull requests and feature discussions are welcome on [GitHub](https://github.com/ComfortablyCoding/reso.js)
+Bug reports, pull requests and feature discussions are welcome at [GitHub](https://github.com/ComfortablyCoding/reso.js)
 
 ## License
 

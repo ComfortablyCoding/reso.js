@@ -1,123 +1,127 @@
-import type { $Fetch, FetchError } from 'ofetch';
-import { $fetch } from 'ofetch';
-import { getQuery, parsePath, parseQuery, stringifyQuery } from 'ufo';
+import { ofetch, type FetchOptions } from 'ofetch';
+import { parseQuery, parseURL } from 'ufo';
 import type {
-	FeedMultiResponse,
+	FeedCollectionResponse,
+	FeedEntityResponse,
 	FeedOptions,
-	FeedRequestOptions,
-	FeedResponse,
-	FeedSingleResponse,
-	TransportError,
-	TransportResponse,
+	IfAny,
+	RequestOptions,
+	ResourceId,
+	ResolveResourceType,
+	ResourceQuery,
 } from '../types/index.js';
-import { FeedError } from './error.js';
 
-export class Feed {
+export class Feed<Schema> {
 	http: FeedOptions['http'];
 	hooks: FeedOptions['hooks'];
-	client: $Fetch;
 	constructor(opts: FeedOptions) {
 		this.http = opts.http;
 		this.hooks = opts.hooks ?? {};
-
-		this.client = $fetch.create({
-			...this.http,
-			onRequest: this.hooks.onRequest ?? [],
-			onRequestError: this.hooks.onRequestError ?? [],
-			onResponse: this.hooks.onResponse ?? [],
-			onResponseError: this.hooks.onResponseError ?? [],
-		});
 	}
 
-	$metadata(query?: string) {
-		const requestOptions: Partial<FeedRequestOptions> = {};
-
-		if (query) {
-			requestOptions['query'] = parseQuery(query);
-		}
-
-		return this.request('/$metadata', requestOptions) as unknown as string;
+	/**
+	 * Fetch the OData $metadata.
+	 *
+	 * @param [query] The optional query to apply for the metadata request (rarely used).
+	 * @returns The raw metadata XML document
+	 */
+	$metadata(query?: ResourceQuery) {
+		return this.request('/$metadata', { query }) as Promise<string>;
 	}
 
-	async *readByQuery<V extends Record<string, unknown>>(
-		resource: string,
-		query?: string,
-	): AsyncGenerator<FeedMultiResponse<V>> {
-		let url: null | string = resource;
-
-		let q = query;
-
-		do {
-			const readResponse = (await this.request<V>(url || resource, {
-				query: parseQuery(q),
-			})) as FeedMultiResponse<V>;
-
-			url = null;
-			if (readResponse && 'nextLink' in readResponse) {
-				url = parsePath(readResponse.nextLink).pathname;
-				q = stringifyQuery(getQuery(readResponse.nextLink));
-			}
-
-			yield readResponse;
-		} while (url);
-	}
-
-	async readById<V extends Record<string, unknown>>(
-		resource: string,
-		id: string | number,
-		query?: string,
-	): Promise<FeedSingleResponse<V>> {
+	/**
+	 * Fetch a single resource entity by its unique ID.
+	 * @param resource The name of the resource collection.
+	 * @param id The unique identifier for the specific entity.
+	 * @param [query] The optional query to apply.
+	 * @returns The entity
+	 */
+	async readById<R extends IfAny<Schema, string, keyof Schema>>(resource: R, id: ResourceId, query?: ResourceQuery) {
 		const resourceId = `(${typeof id === 'string' ? `'${id}'` : id})`;
 
-		const requestOptions: Partial<FeedRequestOptions> = {};
-
-		if (query) {
-			requestOptions['query'] = parseQuery(query);
-		}
-
-		return this.request<V>(resource + resourceId, requestOptions) as unknown as FeedSingleResponse<V>;
+		return this.request(`/${(resource as string) + resourceId}`, { query }) as Promise<
+			FeedEntityResponse<ResolveResourceType<Schema, R>>
+		>;
 	}
 
-	async request<R extends Record<string, unknown>>(
-		path: string,
-		opts?: FeedRequestOptions,
-	): Promise<string | FeedResponse<R> | null> {
-		const response = await this.client.raw(path, opts ?? {}).catch((error: FetchError<{ error: TransportError }>) => {
-			throw new FeedError({
-				message: error.data?.error.message ?? error.message,
-				code: error.statusCode ?? error.data?.error.code ?? 0,
-				...error.data?.error,
-			});
+	/**
+	 * Fetch a resource collection.
+	 *
+	 * The generator will yield a response for each page of results
+	 * and automatically follow the `@odata.nextLink` until all entities are retrieved.
+	 *
+	 * @param resource The name of the resource collection.
+	 * @param [query] The optional query to apply.
+	 * @returns An async generator that yields paginated collection responses.
+	 */
+	async *readByQuery<R extends IfAny<Schema, string, keyof Schema>>(resource: R, query?: ResourceQuery) {
+		let hasNext = false;
+		let nextPath: string | null = null;
+		do {
+			const response = (await this.request(nextPath ?? `/${resource as string}`, { query })) as FeedCollectionResponse<
+				ResolveResourceType<Schema, R>
+			>;
+
+			if (response.nextLink && response.nextLink?.length > 0) {
+				const { search, pathname } = parseURL(response.nextLink);
+				console.log({ pathname });
+				// parsePath.search returns '?key=value', '?' must be stripped for the query
+				query = search.slice(1);
+				nextPath = pathname;
+				hasNext = query.length > 0;
+			} else {
+				hasNext = false;
+			}
+
+			yield response;
+		} while (hasNext);
+	}
+
+	async request<R>(path: string, options?: RequestOptions) {
+		let fetchOptions: FetchOptions = {};
+
+		if (options?.query) {
+			fetchOptions.query = parseQuery(options.query);
+		}
+
+		const rawResponse = await ofetch.raw(new URL(path, this.http.baseURL).toString(), {
+			method: 'GET',
+			...fetchOptions,
 		});
 
-		const data = response._data as null | string | TransportResponse<R>;
-
-		if (!data) {
-			return null;
+		const rawData = rawResponse._data;
+		if (!rawData) {
+			throw new Error('No response received');
 		}
 
-		if (typeof data === 'string') {
-			return data;
+		// Handle string (i.e. metadata) response
+		if (typeof rawData === 'string') {
+			return rawData;
 		}
 
-		const { '@odata.count': count, '@odata.nextLink': nextLink, '@odata.context': context, ...remaining } = data;
+		// Handle entity or collection response
+		const { '@odata.count': count, '@odata.nextLink': nextLink, '@odata.context': context, ...remaining } = rawData;
 
-		const providerResponse: FeedResponse<R> = {
+		const response: any = {
 			data: 'value' in remaining ? remaining.value : remaining,
 		};
 
-		if (typeof count === 'string' || typeof count === 'number') {
-			providerResponse.count = Number(count);
+		if ('@odata.context' in rawData) {
+			response.context = context;
 		}
 
-		if (nextLink) {
-			providerResponse.nextLink = nextLink;
+		if ('value' in rawData && Array.isArray(rawData.value)) {
+			if ('@odata.count' in rawData) {
+				response.count = Number(count);
+			}
+
+			if ('@odata.nextLink' in rawData) {
+				response.nextLink = String(nextLink);
+			}
+
+			return response as FeedCollectionResponse<R>;
 		}
 
-		if (context) {
-			providerResponse.context = context;
-		}
-
-		return providerResponse;
+		return response as FeedEntityResponse<R>;
 	}
 }

@@ -1,138 +1,162 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { Feed } from './feed.js';
+import { ofetch } from 'ofetch';
 
-vi.mock('ofetch', () => ({
-	$fetch: {
-		create: vi.fn(() => ({
-			raw: vi.fn(async (path) => {
-				if (path === '/string') {
-					return { _data: 'lorem' };
-				} else if (path === '/multi-obj') {
-					return {
-						_data: {
-							value: [],
-							'@odata.context': 'context',
-							'@odata.nextLink': 'nextLink',
-							'@odata.count': 0,
-						},
-					};
-				} else if (path === '/single-obj') {
-					return {
-						_data: {
-							'@odata.context': 'context',
-							'@odata.nextLink': 'nextLink',
-							'@odata.count': 0,
-							ListingId: 123,
-						},
-					};
-				}
+vi.mock('ofetch');
 
-				return { _data: null };
-			}),
-		})),
-	},
-}));
-
-let feed: Feed;
-
-beforeEach(() => {
-	feed = new Feed({
-		http: { baseURL: 'http://my-reso-api.com' },
-	});
-	vi.spyOn(feed, 'request');
-
-	vi.resetAllMocks();
-});
+let feed: Feed<any>;
 
 describe('Feed', () => {
+	beforeEach(() => {
+		feed = new Feed({
+			http: { baseURL: 'http://my-reso-api.com' },
+		});
+
+		vi.spyOn(feed, 'request');
+
+		vi.resetAllMocks();
+	});
+
 	describe('$metadata', () => {
-		it('Calls the /$metadata endpoint for $metadata', () => {
-			feed.$metadata();
+		test('should call request with /$metadata for $metadata', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: 'metadata' } as any);
+
+			await feed.$metadata();
 
 			expect(feed.request).toBeCalledWith('/$metadata', {});
 		});
 	});
 
 	describe('readById', () => {
-		it('Constructs singleton key query for number without qoutes', async () => {
-			vi.mocked(feed.request);
+		test('should correctly format number id with no qoutes', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: {} } as any);
 
-			await feed.readById('/Property', 123);
+			await feed.readById('Property', 123);
 			expect(feed.request).toHaveBeenCalledWith('/Property(123)', {});
 		});
 
-		it('Constructs singleton key query for string with qoutes', async () => {
-			vi.mocked(feed.request);
+		test('should correctly format string id with qoutes', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: {} } as any);
 
-			await feed.readById('/Property', '123');
+			await feed.readById('Property', '123');
 			expect(feed.request).toHaveBeenCalledWith("/Property('123')", {});
 		});
 	});
 
 	describe('readByQuery', () => {
-		it('Return next page when nextLink is present', async () => {
-			vi.mocked(feed.request)
+		test('should auto paginate pages until no nextLink is present', async () => {
+			vi.mocked(ofetch.raw)
 				.mockResolvedValueOnce({
-					values: [],
-					nextLink: 'https://my-reso-api/v2/Property?$filter=ListingPrice%20eq%20200000%20&$top=1000&$skip=4000',
-				})
-				.mockResolvedValueOnce({ values: [] });
+					_data: {
+						value: [],
+						'@odata.nextLink': 'https://my-reso-api/Property?$filter=ListingPrice%20eq%20200000&$top=1000&$skip=4000',
+					},
+				} as any)
+				.mockResolvedValueOnce({ _data: { value: [] } } as any);
 
-			const readByQuery = feed.readByQuery('Property', '$filter=ListingPrice eq 200000 &$top=1000');
-			expect((await readByQuery.next()).value).toStrictEqual(
-				expect.objectContaining({
-					values: [],
-					nextLink: 'https://my-reso-api/v2/Property?$filter=ListingPrice%20eq%20200000%20&$top=1000&$skip=4000',
-				}),
-			);
+			const readByQuery = feed.readByQuery('Property', '$filter=ListingPrice eq 200000&$top=1000');
 
-			expect(feed.request).toHaveBeenCalledWith('Property', {
-				query: {
-					$filter: 'ListingPrice eq 200000 ',
-					$top: '1000',
-				},
-			});
-			expect((await readByQuery.next()).value).toStrictEqual(expect.objectContaining({ values: [] }));
-
-			expect(feed.request).toHaveBeenCalledWith('https://my-reso-api/v2/Property', {
-				query: {
-					$filter: 'ListingPrice eq 200000 ',
-					$top: '1000',
-					$skip: '4000',
-				},
+			// first call
+			await expect(readByQuery.next().then((v) => v.value)).resolves.toStrictEqual({
+				data: [],
+				nextLink: 'https://my-reso-api/Property?$filter=ListingPrice%20eq%20200000&$top=1000&$skip=4000',
 			});
 
-			expect((await readByQuery.next()).value).eq(undefined);
+			expect(feed.request).toHaveBeenCalledWith('/Property', {
+				query: '$filter=ListingPrice eq 200000&$top=1000',
+			});
+
+			// paginate
+			await expect(readByQuery.next().then((v) => v.value)).resolves.toStrictEqual({
+				data: [],
+			});
+
+			expect(feed.request).toHaveBeenCalledWith('/Property', {
+				query: '$filter=ListingPrice%20eq%20200000&$top=1000&$skip=4000',
+			});
+
+			// end of line
+			await expect(readByQuery.next().then((v) => v.value)).resolves.eq(undefined);
 		});
 	});
 
 	describe('request', () => {
-		it('Return null for null response', async () => {
-			expect(await feed.request('/')).eq(null);
+		test('should correctly join base url + path', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: {} } as any);
+
+			await feed.request('/Property');
+
+			expect(ofetch.raw).toHaveBeenCalledWith('http://my-reso-api.com/Property', { method: 'GET' });
 		});
 
-		it('Return string for string response', async () => {
-			expect(await feed.request('/string')).eq('lorem');
+		test('should correctly join non root base url + path', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: {} } as any);
+
+			feed = new Feed({
+				http: { baseURL: 'http://my-reso-api.com/v2' },
+			});
+
+			await feed.request('/v2/Property');
+
+			expect(ofetch.raw).toHaveBeenCalledWith('http://my-reso-api.com/v2/Property', { method: 'GET' });
 		});
 
-		it('Return feed response for transport multi obj response', async () => {
-			expect(await feed.request('/multi-obj')).toStrictEqual({
-				context: 'context',
-				count: 0,
-				nextLink: 'nextLink',
-				values: [],
+		test('should correctly format query', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: {} } as any);
+
+			await feed.request('/Property', { query: '$filter=ListingPrice%20eq%20200000&$top=1000&$skip=4000' });
+
+			expect(ofetch.raw).toHaveBeenCalledWith('http://my-reso-api.com/Property', {
+				method: 'GET',
+				query: {
+					$filter: 'ListingPrice eq 200000',
+					$top: '1000',
+					$skip: '4000',
+				},
 			});
 		});
 
-		it('Return feed response for transport single obj response', async () => {
-			expect(await feed.request('/single-obj')).toStrictEqual({
+		test('Return string for string response', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: 'string' } as any);
+
+			await expect(feed.request('/string')).resolves.eq('string');
+		});
+
+		test('should transform collection response and extract odata fields', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({
+				_data: { value: [], '@odata.context': 'context', '@odata.nextLink': 'nextLink', '@odata.count': 0 },
+			} as any);
+
+			await expect(feed.request('/collection')).resolves.toStrictEqual({
 				context: 'context',
 				count: 0,
 				nextLink: 'nextLink',
-				value: {
+				data: [],
+			});
+		});
+
+		test('should transform entity response and exclude odata fields', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({
+				_data: {
+					'@odata.context': 'context',
+					'@odata.nextLink': 'nextLink',
+					'@odata.count': 0,
+					ListingId: 123,
+				},
+			} as any);
+
+			await expect(feed.request('/entity')).resolves.toStrictEqual({
+				context: 'context',
+				data: {
 					ListingId: 123,
 				},
 			});
+		});
+
+		test('should throw error if no data received', async () => {
+			vi.mocked(ofetch.raw).mockResolvedValue({ _data: null } as any);
+
+			await expect(feed.request('/')).rejects.throws(Error);
 		});
 	});
 });

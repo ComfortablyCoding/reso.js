@@ -4,6 +4,10 @@ All notable changes will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Support passing a generic interface to `createFeed`/`Feed`, enabling full type inference and safety for all resource operations
+
 ### Changed
 
 - Updated various dependencies to latest stable versions.

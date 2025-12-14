@@ -12,22 +12,6 @@ export interface TransportErrorDetail {
 	message: string;
 }
 
-export type TransportResponse<V extends Record<string, unknown>> =
-	| TransportMultiResponse<V>
-	| TransportSingleResponse<V>;
-
-export interface TransportBaseResponse {
-	'@odata.context'?: string;
-	'@odata.nextLink'?: string;
-	'@odata.count'?: string | number;
-}
-
-export type TransportSingleResponse<V> = TransportBaseResponse & V & { value: never };
-
-export interface TransportMultiResponse<V extends Record<string, unknown>> extends TransportBaseResponse {
-	value: V[];
-}
-
 export enum TransportErrorCode {
 	ServiceUnavailable = 'SERVICE_UNAVAILABLE',
 	Forbidden = 'FORBIDDEN',

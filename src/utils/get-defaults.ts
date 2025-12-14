@@ -3,7 +3,6 @@ import { defu } from 'defu';
 import type { CreateFeedOptions } from '../types/index.js';
 import { getProvider } from './get-provider.js';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type GetDefaultsReturn = Defu<{}, [Omit<CreateFeedOptions, 'hooks'>]>;
 
 export function getDefaults(overrides: Omit<CreateFeedOptions, 'hooks'>): GetDefaultsReturn {

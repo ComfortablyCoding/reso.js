@@ -2,13 +2,6 @@ import type { FetchContext, FetchHook, FetchOptions, FetchResponse, ResponseType
 import type { CreateAuthOptions } from './auth.js';
 import type { CreateLimiterOptions } from './limiter.js';
 
-export interface CreateFeedOptions {
-	http: FeedHttpOptions;
-	hooks?: FeedHooksOptions;
-	limiter?: CreateLimiterOptions;
-	auth?: CreateAuthOptions;
-}
-
 export type FeedHttpOptions = Omit<
 	FetchOptions,
 	'onResponse' | 'onResponseError' | 'onRequest' | 'onRequestError' | 'baseURL'
@@ -34,28 +27,36 @@ export interface FeedHooksOptions<T = unknown, R extends ResponseType = Response
 	>[];
 }
 
-export interface FeedBaseResponse {
-	context?: string;
-}
-
-export interface FeedMultiResponse<V extends Record<string, unknown>> extends FeedBaseResponse {
-	nextLink?: string;
-	count?: string | number;
-	data: V[];
-}
-
-export interface FeedSingleResponse<V extends Record<string, unknown>> extends FeedBaseResponse {
-	data: V;
-}
-
-export type FeedResponse<V extends Record<string, unknown>> = FeedMultiResponse<V> | FeedSingleResponse<V>;
-
 export interface FeedOptions {
 	http: FeedHttpOptions;
 	hooks?: FeedHooksOptions;
 }
 
-export type FeedRequestOptions = Omit<
-	FetchOptions,
-	'onResponse' | 'onResponseError' | 'onRequest' | 'onRequestError' | 'baseURL'
->;
+export interface CreateFeedOptions {
+	http: FeedHttpOptions;
+	hooks?: FeedHooksOptions;
+	limiter?: CreateLimiterOptions;
+	auth?: CreateAuthOptions;
+}
+
+export interface RequestOptions {
+	query?: string | undefined;
+}
+
+export type ResourceId = string | number;
+export type ResourceQuery = string;
+
+export interface FeedBaseResponse<R> {
+	context?: string;
+	data: R | R[];
+}
+
+export interface FeedEntityResponse<R> extends FeedBaseResponse<R> {
+	data: R;
+}
+
+export interface FeedCollectionResponse<R> extends FeedBaseResponse<R> {
+	nextLink?: string;
+	count?: string | number;
+	data: R[];
+}

@@ -1,12 +1,12 @@
 import { createAuth } from '../auth/create-auth.js';
 import { createLimiter } from '../limiter.js';
-import { type CreateFeedOptions, type FeedHooksOptions, type FeedLimiter } from '../types/index.js';
+import type { CreateFeedOptions, FeedHooksOptions, FeedLimiter } from '../types/index.js';
 import { getDefaults } from '../utils/get-defaults.js';
 import { toArray } from '../utils/to-array.js';
 import { FeedError } from './error.js';
 import { Feed } from './feed.js';
 
-export function createFeed(opts: CreateFeedOptions) {
+export function createFeed<Schema>(opts: CreateFeedOptions) {
 	const { hooks, ...overrides } = opts ?? {};
 
 	if (!opts?.http?.baseURL) {
@@ -52,7 +52,7 @@ export function createFeed(opts: CreateFeedOptions) {
 		});
 	}
 
-	return new Feed({
+	return new Feed<Schema>({
 		http: options.http,
 		hooks: {
 			onRequest: [...toArray(globalHooks.onRequest), ...toArray(hooks?.onRequest)],
