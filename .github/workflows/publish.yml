@@ -1,4 +1,8 @@
-name: Publish
+name: Publish Package
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
 
 on:
   release:
@@ -14,11 +18,12 @@ jobs:
       - name: setup
         uses: ./.github/actions/setup
 
+      - name: test
+        run: pnpm test
+
       - name: build
         run: pnpm run build
 
       - name: publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         shell: bash
-        run: pnpm publish --no-git-checks --access public
+        run: pnpm publish --access public --no-git-checks
