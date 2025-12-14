@@ -8,8 +8,6 @@ All notable changes will be documented in this file.
 
 - Removed log from `readByQuery`
 
----
-
 ## [0.2.0]
 
 ### Added
@@ -25,8 +23,6 @@ All notable changes will be documented in this file.
 
 - Pinned vulnerable dependencies for improved security and stability.
 - Return types for `readById` and `readByQuery`.
-
----
 
 ## [0.1.0]
 
