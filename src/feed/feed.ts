@@ -64,7 +64,6 @@ export class Feed<Schema> {
 
 			if (response.nextLink && response.nextLink?.length > 0) {
 				const { search, pathname } = parseURL(response.nextLink);
-				console.log({ pathname });
 				// parsePath.search returns '?key=value', '?' must be stripped for the query
 				query = search.slice(1);
 				nextPath = pathname;

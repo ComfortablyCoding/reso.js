@@ -2,6 +2,14 @@
 
 All notable changes will be documented in this file.
 
+## [0.2.1]
+
+### Fixed
+
+- Removed log from `readByQuery`
+
+---
+
 ## [0.2.0]
 
 ### Added
