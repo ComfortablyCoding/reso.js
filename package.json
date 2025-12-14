@@ -2,7 +2,7 @@
 	"$schema": "https://json.schemastore.org/package",
 	"name": "reso.js",
 	"description": "A robust, Typescript-first Node.js client designed for interacting with RESO Web API services, fully aligned with the current RESO Web API specification.",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"type": "module",
 	"license": "MIT",
 	"author": {
