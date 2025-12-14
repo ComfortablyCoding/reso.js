@@ -1,6 +1,6 @@
 # reso.js
 
-**`reso.js`** is a robust, Typescript-first `Node.js` client designed for interaction with RESO Web API services.
+**`reso.js`** is a robust, Typescript-first `Node.js` client designed for interacting with RESO Web API services.
 
 It is _fully compliant_ with the current [RESO Web API specification](https://github.com/RESOStandards/transport) and provides commonly used features out-of-the-box, including:
 
