@@ -46,10 +46,8 @@
 		"lint:check": "oxlint"
 	},
 	"dependencies": {
-		"defu": "6.1.4",
 		"ofetch": "1.5.1",
-		"p-queue": "9.0.1",
-		"ufo": "1.6.1"
+		"p-queue": "9.0.1"
 	},
 	"devDependencies": {
 		"@typescript/native-preview": "7.0.0-dev.20260317.1",
