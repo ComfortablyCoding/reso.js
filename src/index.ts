@@ -1,3 +1,4 @@
-export { createFeed } from './feed/create-feed.js';
-export { FeedError } from './feed/error.js';
-export * from './types/index.js';
+export { createFeed } from './create.js';
+export { Feed } from './feed.js';
+export { FeedError } from './error.js';
+export * from './types.js';
