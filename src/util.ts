@@ -66,23 +66,7 @@ export async function fetcher(ctx: MiddlewareContext): Promise<void> {
       });
     }
 
-    // Normalize "meta" fields
-    const payload: Record<string, any> = {};
-    for (const [key, value] of Object.entries(result)) {
-      if (key.startsWith('@odata.')) {
-        payload[key.slice(7)] = value;
-      } else if (key === 'value') {
-        payload['data'] = value;
-      } else {
-        if (!payload['data']) {
-          payload['data'] = {};
-        }
-
-        payload['data'][key] = value;
-      }
-    }
-
-    data = payload;
+    data = normalizeODataResponse(result);
   } else if (type?.startsWith('text/plain') || type?.startsWith('text/html') || type?.startsWith('application/xml')) {
     const result = await response.text();
     if (!response.ok) {
@@ -111,4 +95,31 @@ export async function fetcher(ctx: MiddlewareContext): Promise<void> {
     headers,
     data,
   };
+}
+
+/**
+ * Normalize an entity/collection odata response into a unified shape
+ *
+ * - `@odata.*` keys are stripped of the prefix
+ * - `value` is mapped to `data` (collection responses)
+ * - Remaining keys are collected into `data` (entity responses)
+ */
+export function normalizeODataResponse(result: Record<string, unknown>): Record<string, unknown> {
+  const payload: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(result)) {
+    if (key.startsWith('@odata.')) {
+      payload[key.slice(7)] = value;
+    } else if (key === 'value') {
+      payload['data'] = value;
+    } else {
+      if (!payload['data']) {
+        payload['data'] = {};
+      }
+
+      payload['data'][key] = value;
+    }
+  }
+
+  return payload;
 }
