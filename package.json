@@ -4,6 +4,12 @@
   "version": "0.2.1",
   "description": "A robust, Typescript-first Node.js client designed for interacting with RESO Web API services, fully aligned with the current RESO Web API specification.",
   "keywords": [
+    "data feed",
+    "listings",
+    "mls",
+    "odata",
+    "property",
+    "real estate",
     "reso",
     "search",
     "web api",
@@ -47,12 +53,17 @@
     "lint:check": "oxlint"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260317.1",
+    "@typescript/native-preview": "7.0.0-dev.20260318.1",
     "oxfmt": "0.41.0",
     "oxlint": "1.56.0",
     "tsdown": "0.21.4",
     "typescript": "5.9.3",
-    "vitest": "4.0.15"
+    "vitest": "4.1.0"
+  },
+  "peerDependenciesMeta": {
+    "p-ratelimit": {
+      "optional": true
+    }
   },
   "optionalDependencies": {
     "p-ratelimit": "1.0.1"
