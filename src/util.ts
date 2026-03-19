@@ -31,8 +31,8 @@ export async function fetcher(ctx: MiddlewareContext): Promise<void> {
     ctx.request.headers = {};
   }
 
-  if (typeof ctx.request.headers?.['Content-Type'] !== 'string') {
-    ctx.request.headers['Content-Type'] = ctx.request.path === '/$metadata' ? 'application/xml' : 'application/json';
+  if (typeof ctx.request.headers?.['Accept'] !== 'string') {
+    ctx.request.headers['Accept'] = ctx.request.path === '$metadata' ? 'application/xml' : 'application/json';
   }
 
   let url = new globalThis.URL(ctx.request.path, ctx.request.baseURL);

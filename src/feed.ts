@@ -95,14 +95,14 @@ export class Feed<Schema> {
     const ctx: MiddlewareContext = {
       request: {
         baseURL: this.#http.baseURL,
-        headers: this.#http.headers,
+        headers: { ...this.#http.headers, ...options?.headers },
         path,
         query: options?.query,
       },
     };
 
-    if (Number.isNaN(this.#http.timeout) === false && Number(this.#http.timeout) > 0) {
-      ctx.request.signal = AbortSignal.timeout(Number(this.#http.timeout));
+    if (this.#http.timeout && this.#http.timeout > 0) {
+      ctx.request.signal = AbortSignal.timeout(this.#http.timeout);
     }
 
     await runMiddleware(this.#middleware, ctx, () => fetcher(ctx));

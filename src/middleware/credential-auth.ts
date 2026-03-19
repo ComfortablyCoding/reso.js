@@ -9,7 +9,7 @@ export interface CredentialAuthMiddlewareConfig {
   grantType?: string;
   /** Authorization schema prefix. Defaults to '"Bearer"' */
   tokenType?: string;
-  /** Milliseconds before actual expiry to trigger refresh. Defaukts ti 30_000 */
+  /** Milliseconds before actual expiry to trigger refresh. Defaults to 30_000 */
   refreshBuffer?: number;
 }
 
@@ -77,12 +77,17 @@ export function withClientCredentials(opts: CredentialAuthMiddlewareConfig): Mid
     token = data.access_token;
 
     if (data.token_type && !tokenType) {
-      tokenType = data.token_type ?? 'Bearer';
+      tokenType = data.token_type;
     }
 
     const ttl = Number(data.expires_in);
 
-    expiresAt = Date.now() + ttl * 1000 - refreshBuffer;
+    if (Number.isNaN(ttl) || ttl <= 0) {
+      // No expiry info — default to 1 hour
+      expiresAt = Date.now() + 3_600_000 - refreshBuffer;
+    } else {
+      expiresAt = Date.now() + ttl * 1000 - refreshBuffer;
+    }
   }
 
   async function refresh() {
@@ -102,7 +107,7 @@ export function withClientCredentials(opts: CredentialAuthMiddlewareConfig): Mid
       ctx.request.headers = {};
     }
 
-    const header = `${tokenType} ${token}`;
+    const header = `${tokenType ?? 'Bearer'} ${token}`;
 
     ctx.request.headers['Authorization'] = header;
 

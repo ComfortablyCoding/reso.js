@@ -22,7 +22,7 @@ const providers = new Map<RESOProviders, number>([
 ]);
 
 /**
- * Rate limits outgoing requests. Reqiures `p-ratelimit` optional dependency
+ * Rate limits outgoing requests. Requires `p-ratelimit` optional dependency
  *
  * @param opts
  */
@@ -39,7 +39,7 @@ export function withRateLimit(opts?: RateLimitMiddlewareConfig): Middleware {
 
       if (!providerPoints) {
         throw new Error(
-          '"${opts.provider}" is not a supported provider. Valid providers are "bridge", "mlsgrid", "trestle" or "spark"',
+          `"${opts.provider}" is not a supported provider. Valid providers are "bridge", "mlsgrid", "trestle" or "spark"`,
         );
       }
 
@@ -56,7 +56,7 @@ export function withRateLimit(opts?: RateLimitMiddlewareConfig): Middleware {
     limiter = pRateLimit({
       interval: duration,
       rate: points,
-      concurrency: 1, // no more than 10 running at once
+      concurrency: 1,
     });
 
     return limiter;

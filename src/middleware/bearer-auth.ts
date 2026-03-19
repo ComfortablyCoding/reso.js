@@ -6,7 +6,7 @@ export interface BearerAuthMiddlewareConfig {
 }
 
 /**
- * Attach a status bearer token to each request
+ * Attach a static bearer token to each request
  *
  * @param opts
  */
